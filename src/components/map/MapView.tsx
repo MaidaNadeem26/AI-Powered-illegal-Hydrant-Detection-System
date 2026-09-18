@@ -34,7 +34,11 @@ function FlyToPosition({ position }: { position: [number, number] | null }) {
   return null
 }
 
-export default function MapView() {
+interface Props {
+  onAreaSelected?: (geometry: GeoJSON.Feature<GeoJSON.Polygon>) => void
+}
+
+export default function MapView({ onAreaSelected }: Props) {
   const [satellite, setSatellite] = useState(false)
   const [searchPosition, setSearchPosition] = useState<[number, number] | null>(null)
 
@@ -55,9 +59,7 @@ export default function MapView() {
         <ZoomControl position="bottomright" />
 
         <DrawControl
-          onAreaSelected={(geojson) => {
-            console.log('Selected area:', geojson)
-          }}
+          onAreaSelected={(geojson) => onAreaSelected?.(geojson as GeoJSON.Feature<GeoJSON.Polygon>)}
         />
 
         {searchPosition && <FlyToPosition position={searchPosition} />}
