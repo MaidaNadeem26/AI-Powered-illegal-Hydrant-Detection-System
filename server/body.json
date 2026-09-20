@@ -1,0 +1,22 @@
+{
+  "collection": "SENTINEL-2",
+  "startDate": "2024-06-01",
+  "endDate": "2024-06-30",
+  "geometry": {
+    "type": "Feature",
+    "properties": {},
+    "geometry": {
+      "type": "Polygon",
+      "coordinates": [[[67.070, 24.915], [67.090, 24.915], [67.090, 24.935], [67.070, 24.935], [67.070, 24.915]]]
+    }
+  },
+  "product": {
+    "id": "74d79481-c5a5-4e07-9c4c-1ea939ad34de",
+    "name": "S2B_MSIL2A_20240629T060639_N0510_R134_T42RTN_20240629T075155.SAFE",
+    "collection": "SENTINEL-2",
+    "startDate": "2024-06-29T06:06:39.024000Z",
+    "endDate": "2024-06-29T06:06:39.024000Z",
+    "downloadPath": "/eodata/Sentinel-2/MSI/L2A/2024/06/29/S2B_MSIL2A_20240629T060639_N0510_R134_T42RTN_20240629T075155.SAFE",
+    "quicklookUrl": "https://catalogue.dataspace.copernicus.eu/odata/v1/Assets(46759d6e-c551-493f-a6ab-4a98492726e6)/$value"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "model": "meta-llama/llama-4-maverick-17b-128e-instruct",
+  "messages": [{"role": "user", "content": "hello"}],
+  "max_completion_tokens": 200
+}

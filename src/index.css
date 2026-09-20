@@ -1,9 +1,9 @@
 @import 'tailwindcss';
 
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #0f172a;
-  background: #ffffff;
+  font-family: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+  color: #13272b;
+  background: #edf1ee;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -16,13 +16,13 @@
 html,
 body,
 #root {
-  height: 100%;
+  min-height: 100%;
 }
 
 body {
   margin: 0;
   min-width: 320px;
-  background: #ffffff;
+  background: #edf1ee;
 }
 
 button,
@@ -46,10 +46,6 @@ select {
 .leaflet-popup-tip {
   box-shadow: none;
   border: 1px solid #e2e8f0;
-}
-
-.leaflet-draw-toolbar a {
-  border-radius: 6px !important;
 }
 
 .leaflet-bar {
