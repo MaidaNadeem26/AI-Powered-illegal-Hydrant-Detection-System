@@ -2,7 +2,7 @@ import type { Feature, Polygon } from 'geojson'
 import type { SatelliteProduct } from './copernicus.js'
 
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash'
+const DEFAULT_GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
 export interface HotspotAnalysis {
   imageUsable: boolean
@@ -83,55 +83,83 @@ export async function analyzeSatelliteImage(product: SatelliteProduct, geometry:
   if (targetModel.startsWith('models/')) {
     targetModel = targetModel.slice('models/'.length)
   }
+  if (targetModel === 'gemini-2.0-flash-lite' || targetModel === 'gemini-2.5-flash-lite') {
+    targetModel = 'gemini-3.5-flash-lite'
+  }
   if (targetModel === 'gemini-2.5-flash') {
     targetModel = 'gemini-3.6-flash'
   }
 
-  const candidateModels = Array.from(new Set([targetModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']))
+  const candidateModels = Array.from(new Set([
+    targetModel,
+    'gemini-3.5-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-3-flash-preview',
+    'gemini-2.5-flash',
+  ]))
+
+  const MAX_ROUNDS = 2
   let lastError: Error | null = null
 
-  for (const model of candidateModels) {
-    const endpoint = `${GEMINI_API_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: analysisPrompt(product, geometry) }, { inlineData: imagePart }] }],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-      }),
-    })
-
-    if (!response.ok) {
-      const errorBody = await response.text()
-      let detail = errorBody
+  for (let round = 1; round <= MAX_ROUNDS; round++) {
+    for (const model of candidateModels) {
       try {
-        const parsed = JSON.parse(errorBody) as { error?: { message?: string } }
-        detail = parsed.error?.message ?? errorBody
-      } catch {
-        // Preserve the raw provider response when it is not JSON.
-      }
+        const endpoint = `${GEMINI_API_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: analysisPrompt(product, geometry) }, { inlineData: imagePart }] }],
+            generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+          }),
+        })
 
-      const isRetryable =
-        response.status === 503 ||
-        response.status === 429 ||
-        response.status === 404 ||
-        response.status === 500 ||
-        response.status === 502 ||
-        response.status === 504
+        if (!response.ok) {
+          const errorBody = await response.text()
+          let detail = errorBody
+          try {
+            const parsed = JSON.parse(errorBody) as { error?: { message?: string } }
+            detail = parsed.error?.message ?? errorBody
+          } catch {
+            // Preserve raw response
+          }
+          console.warn(`[gemini] Round ${round}: Model ${model} returned HTTP ${response.status} (${detail}). Trying next model...`)
+          lastError = new Error(`Gemini API returned HTTP ${response.status} for ${model}: ${detail}`)
+          continue
+        }
 
-      if (isRetryable && model !== candidateModels[candidateModels.length - 1]) {
-        console.warn(`[gemini] Model ${model} returned HTTP ${response.status} (${detail}). Automatically failing over to next model...`)
-        lastError = new Error(`Gemini API returned HTTP ${response.status} for ${model}: ${detail}`)
+        const payload = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
+        const content = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('')
+        if (!content || !content.trim()) {
+          console.warn(`[gemini] Round ${round}: Model ${model} returned empty content. Trying next model...`)
+          lastError = new Error(`Gemini model ${model} returned empty response.`)
+          continue
+        }
+
+        try {
+          const analysis = parseAnalysis(content)
+          console.log(`[gemini] Successfully received valid analysis using model ${model} in round ${round}.`)
+          return analysis
+        } catch (parseErr) {
+          const parseMsg = parseErr instanceof Error ? parseErr.message : 'JSON parse failed'
+          console.warn(`[gemini] Round ${round}: Model ${model} returned unparseable analysis: ${parseMsg}. Trying next model...`)
+          lastError = new Error(`Gemini model ${model} parse error: ${parseMsg}`)
+          continue
+        }
+      } catch (networkErr) {
+        const netMsg = networkErr instanceof Error ? networkErr.message : 'Network error'
+        console.warn(`[gemini] Round ${round}: Error connecting to model ${model}: ${netMsg}. Trying next model...`)
+        lastError = new Error(`Network error for model ${model}: ${netMsg}`)
         continue
       }
-      throw new Error(`Gemini API returned HTTP ${response.status}: ${detail}`)
     }
 
-    const payload = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
-    const content = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('')
-    if (!content) throw new Error('Gemini returned an empty analysis.')
-    return parseAnalysis(content)
+    if (round < MAX_ROUNDS) {
+      console.warn(`[gemini] Round ${round} completed without success. Waiting 1.2s before retrying all models...`)
+      await new Promise((resolve) => setTimeout(resolve, 1200))
+    }
   }
 
-  throw lastError ?? new Error('Gemini analysis failed.')
+  throw lastError ?? new Error('Gemini analysis failed across all models and retry rounds.')
 }
