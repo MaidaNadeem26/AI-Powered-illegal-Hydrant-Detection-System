@@ -1,9 +1,16 @@
 {
   "rewrites": [
     {
+      "source": "/api/:match*",
+      "destination": "https://ai-powered-illegal-hydrant-detection.onrender.com/api/:match*"
+    },
+    {
+      "source": "/uploads/:match*",
+      "destination": "https://ai-powered-illegal-hydrant-detection.onrender.com/uploads/:match*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
 }
-
