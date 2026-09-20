@@ -25,6 +25,7 @@ export interface AnalysisResult {
   signs: string[]
   latitude: number | null
   longitude: number | null
+  usedModel?: string
 }
 
 export interface Hotspot {
@@ -47,10 +48,11 @@ export interface AnalysisResponse {
   analysis: AnalysisResult
   hotspot: Hotspot | null
   product: SatelliteProduct
-  image: { width: number; height: number; bytes: number }
+  image: { width: number; height: number; bytes: number; dataUrl?: string }
   saved?: boolean
   hotspotId?: string
   detectionId?: string
+  model?: string
 }
 
 const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')

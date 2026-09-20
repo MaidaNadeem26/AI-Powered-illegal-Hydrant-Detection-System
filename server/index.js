@@ -82,7 +82,19 @@ app.post('/api/satellite/analyze', async (request, response) => {
                 : 'gemini-3.6-flash';
             persistence = saveDetection({ latitude: hotspot.latitude, longitude: hotspot.longitude, approximate: analysis.latitude === null, areaGeojson: searchRequest.geometry, confidence: analysis.confidence, summary: analysis.summary, signs: analysis.signs, productId: satelliteProduct.id, productName: satelliteProduct.name, collection: satelliteProduct.collection, capturedAt: satelliteProduct.startDate, imagePath: `/uploads/satellite/${filename}`, model: savedModel });
         }
-        response.json({ analysis, hotspot, product: satelliteProduct, image: { width: processImage.width, height: processImage.height, bytes: processImage.bytes }, ...persistence });
+        response.json({
+            analysis,
+            hotspot,
+            product: satelliteProduct,
+            image: {
+                width: processImage.width,
+                height: processImage.height,
+                bytes: processImage.bytes,
+                dataUrl: processImage.dataUrl,
+            },
+            model: analysis.usedModel ?? savedModel,
+            ...persistence,
+        });
     }
     catch (error) {
         const message = error instanceof Error ? error.message : 'Satellite image analysis failed.';

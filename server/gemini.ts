@@ -12,6 +12,7 @@ export interface HotspotAnalysis {
   signs: string[]
   latitude: number | null
   longitude: number | null
+  usedModel?: string
 }
 
 function analysisPrompt(product: SatelliteProduct, geometry: Feature<Polygon>) {
@@ -111,7 +112,7 @@ export async function analyzeSatelliteImage(product: SatelliteProduct, geometry:
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: analysisPrompt(product, geometry) }, { inlineData: imagePart }] }],
-            generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+            generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
           }),
         })
 
@@ -140,7 +141,7 @@ export async function analyzeSatelliteImage(product: SatelliteProduct, geometry:
         try {
           const analysis = parseAnalysis(content)
           console.log(`[gemini] Successfully received valid analysis using model ${model} in round ${round}.`)
-          return analysis
+          return { ...analysis, usedModel: model }
         } catch (parseErr) {
           const parseMsg = parseErr instanceof Error ? parseErr.message : 'JSON parse failed'
           console.warn(`[gemini] Round ${round}: Model ${model} returned unparseable analysis: ${parseMsg}. Trying next model...`)

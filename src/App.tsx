@@ -479,11 +479,10 @@ export function App() {
             />
           )}
 
-          {/* Civic Disclaimer */}
+          {/* Civic Note */}
           <div className="pt-4 border-t border-[var(--line)]">
             <p className="text-[11px] text-[var(--ink-faint)] leading-normal">
-              Satellite imagery reveals physical signatures, not intent or legal entitlement. Sentinel Watch never accuses individuals or determines illegality. Every detection is a screening signal that requires qualified municipal field inspection before regulatory action.
-              Satellite imagery reveals physical signatures, not intent or legal entitlement. Global Water Theft Detection & Monitoring never accuses individuals or determines illegality. Every detection is a screening signal that requires qualified municipal field inspection before regulatory action.
+              Satellite imagery reveals physical signatures, not intent or legal entitlement. Global Water Theft Detection & Monitoring provides screening signals that require municipal field verification before regulatory action.
             </p>
           </div>
         </div>
@@ -564,7 +563,15 @@ function ResultCard({ analysis, hotspot, centerPin, product, image, hotspotId }:
   return (
     <div className="p-4 rounded-[var(--radius-sm)] border border-[var(--line-strong)] bg-[var(--surface)] space-y-3.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-mono font-semibold text-[var(--teal)]">Detection record</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono font-semibold text-[var(--teal)]">Live AI Detection</span>
+          {analysis.usedModel && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-pill)] text-[10px] font-mono font-medium bg-[var(--teal-tint)] text-[var(--teal-dark)] border border-[var(--teal)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--teal)] animate-pulse"></span>
+              {analysis.usedModel}
+            </span>
+          )}
+        </div>
         {isHotspot ? (
           <span className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-pill)] text-[11px] font-medium bg-[var(--gold-tint)] text-[var(--gold)] border border-[var(--gold)]">
             Needs review
@@ -607,13 +614,19 @@ function ResultCard({ analysis, hotspot, centerPin, product, image, hotspotId }:
       <div className="rounded-[var(--radius-sm)] overflow-hidden border border-[var(--line-strong)] bg-[var(--surface-alt)]">
         <div className="relative aspect-video">
           <img
-            src="/images/satellite-detection.jpg"
+            src={image.dataUrl || '/images/satellite-detection.jpg'}
             alt="Copernicus Sentinel-2 processed imagery preview"
             className="w-full h-full object-cover"
           />
           <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--surface)]/95 text-[var(--ink)] border border-[var(--line-strong)] font-mono text-[10px] font-medium backdrop-blur-xs shadow-xs">
             Sentinel-2 B04/B03/B02 True Color
           </div>
+          {analysis.usedModel && (
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface)]/95 text-[var(--teal-dark)] border border-[var(--teal)] font-mono text-[10px] font-semibold backdrop-blur-xs shadow-xs flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--teal)] animate-pulse"></span>
+              <span>{analysis.usedModel}</span>
+            </div>
+          )}
         </div>
       </div>
 
