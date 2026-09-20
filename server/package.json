@@ -9,7 +9,8 @@
     "test": "vitest run",
     "build": "echo 'Backend ready'",
     "start": "tsx index.ts",
-    "server": "tsx index.ts"
+    "server": "tsx index.ts",
+    "postinstall": "npm rebuild better-sqlite3"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
