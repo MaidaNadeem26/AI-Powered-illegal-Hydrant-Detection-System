@@ -9,6 +9,8 @@
     "test": "vitest run",
     "build": "echo 'Backend ready'",
     "start": "tsx index.ts"
+    "start": "tsx index.ts",
+    "server": "tsx index.ts"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
