@@ -13,7 +13,7 @@ export default function LandingPage() {
             <a href="#dashboard-preview">Triage queue</a>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/" className="landing-btn landing-btn-primary text-xs !py-1 !px-3">
+            <Link to="/screening" className="landing-btn landing-btn-primary text-xs !py-1 !px-3">
               Launch screening app →
             </Link>
           </div>
@@ -30,7 +30,7 @@ export default function LandingPage() {
               In dense, arid urban centers like Karachi, water extraction networks siphon municipal mains into commercial tanker queues undetected. Global Water Theft Detection & Monitoring screens multispectral Sentinel-2 imagery to spot unauthorized surface reservoirs, booster clusters, and perimeter tanker tracks weeks before billing anomalies surface.
             </p>
             <div className="landing-hero-actions">
-              <Link to="/" className="landing-btn landing-btn-primary">
+              <Link to="/screening" className="landing-btn landing-btn-primary">
                 Launch screening app
               </Link>
               <a href="#pipeline" className="landing-btn landing-btn-secondary">
@@ -348,7 +348,7 @@ export default function LandingPage() {
               <a href="mailto:contact@watertheftdetection.org" className="landing-btn landing-btn-primary">
                 Request a demo
               </a>
-              <Link to="/" className="landing-btn landing-btn-secondary">
+              <Link to="/screening" className="landing-btn landing-btn-secondary">
                 Launch screening app
               </Link>
             </div>

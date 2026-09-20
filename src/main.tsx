@@ -26,13 +26,22 @@ createRoot(document.getElementById('root')!).render(
         <main className="flex-1 flex flex-col">
           <Suspense fallback={<RouteFallback />}>
             <Routes>
-              <Route path="/" element={<App />} />
-              <Route path="/screening" element={<App />} />
+              {/* Landing Page as Default Initial Route */}
+              <Route path="/" element={<LandingPage />} />
               <Route path="/landing" element={<LandingPage />} />
               <Route path="/overview" element={<LandingPage />} />
-              <Route path="/landing.html" element={<Navigate to="/landing" replace />} />
+              <Route path="/landing.html" element={<Navigate to="/" replace />} />
+
+              {/* Satellite Screening App */}
+              <Route path="/screening" element={<App />} />
+              <Route path="/satellite" element={<App />} />
+
+              {/* Investigation Dashboard & Dossiers */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/hotspots/:id" element={<HotspotDetail />} />
+
+              {/* Fallback to Home */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </main>
@@ -40,4 +49,3 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>,
 )
-

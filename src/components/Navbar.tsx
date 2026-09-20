@@ -41,7 +41,8 @@ export function Navbar() {
           {/* Center Navigation Links */}
           <nav className="hidden md:flex items-center space-x-1" aria-label="Main Navigation">
             <NavLink
-              to="/landing"
+              to="/"
+              end
               className={({ isActive }) =>
                 `px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors ${
                   isActive
@@ -53,8 +54,7 @@ export function Navbar() {
               Product overview
             </NavLink>
             <NavLink
-              to="/"
-              end
+              to="/screening"
               className={({ isActive }) =>
                 `px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium transition-colors ${
                   isActive
@@ -123,7 +123,8 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-[var(--line)] bg-[var(--surface)] px-4 pt-2 pb-3 space-y-1">
           <NavLink
-            to="/landing"
+            to="/"
+            end
             onClick={() => setMobileMenuOpen(false)}
             className={({ isActive }) =>
               `block px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium ${
@@ -136,8 +137,7 @@ export function Navbar() {
             Product overview
           </NavLink>
           <NavLink
-            to="/"
-            end
+            to="/screening"
             onClick={() => setMobileMenuOpen(false)}
             className={({ isActive }) =>
               `block px-3 py-2.5 rounded-[var(--radius-sm)] text-sm font-medium ${
