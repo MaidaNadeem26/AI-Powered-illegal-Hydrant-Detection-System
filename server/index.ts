@@ -14,6 +14,7 @@ import { toPotentialHotspot } from './hotspot.js'
 import { addVerification, getHotspot, getStats, listHotspots, saveDetection, statuses, updateHotspot, type VerificationStatus } from './db.js'
 
 dotenv.config({ path: fileURLToPath(new URL('./.env', import.meta.url)) })
+dotenv.config({ path: fileURLToPath(new URL('../.env', import.meta.url)) })
 
 const app = express()
 const port = Number(process.env.PORT ?? 3001)
@@ -94,8 +95,8 @@ app.get('/api/hotspots/export.csv', (request, response) => {
   const csv = [header, ...rows.map((row) => [row.id, row.latitude, row.longitude, row.country, row.region, row.status, row.latest_confidence, row.created_at, row.last_detected, row.last_verified_at])].map((row) => row.map(escape).join(',')).join('\n')
   response.setHeader('Content-Type', 'text/csv; charset=utf-8'); response.setHeader('Content-Disposition', 'attachment; filename="hotspots.csv"'); response.send(csv)
 })
-app.get('/api/hotspots/:id', (request, response) => { const result = getHotspot(request.params.id); if (!result) return response.status(404).json({ error: 'Hotspot not found.' }); response.json(result) })
-app.patch('/api/hotspots/:id', requireAdmin, rateLimit, (request, response) => { const body = z.object({ country: z.string().max(120).nullable(), region: z.string().max(120).nullable() }).safeParse(request.body); if (!body.success) return response.status(400).json({ error: 'Only country and region are editable.' }); const result = updateHotspot(request.params.id, body.data.country, body.data.region); if (!result) return response.status(404).json({ error: 'Hotspot not found.' }); response.json(result) })
+app.get('/api/hotspots/:id', (request, response) => { const result = getHotspot(request.params.id as string); if (!result) return response.status(404).json({ error: 'Hotspot not found.' }); response.json(result) })
+app.patch('/api/hotspots/:id', requireAdmin, rateLimit, (request, response) => { const body = z.object({ country: z.string().max(120).nullable(), region: z.string().max(120).nullable() }).safeParse(request.body); if (!body.success) return response.status(400).json({ error: 'Only country and region are editable.' }); const result = updateHotspot(request.params.id as string, body.data.country, body.data.region); if (!result) return response.status(404).json({ error: 'Hotspot not found.' }); response.json(result) })
 
 const verificationSchema = z.object({ status: z.enum(statuses), notes: z.string().max(2000).default(''), reviewer_name: z.string().min(1).max(120), visited_at: z.string().datetime().refine((value) => new Date(value) <= new Date(), 'visited_at cannot be in the future'), latitude: z.coerce.number().min(-90).max(90).nullable().optional(), longitude: z.coerce.number().min(-180).max(180).nullable().optional(), location_accuracy_m: z.coerce.number().positive().nullable().optional() })
 app.post('/api/hotspots/:id/verifications', requireAdmin, rateLimit, upload.array('photos', 6) as unknown as express.RequestHandler, async (request, response) => {
@@ -110,7 +111,7 @@ app.post('/api/hotspots/:id/verifications', requireAdmin, rateLimit, upload.arra
     const extension = isJpeg ? 'jpg' : isPng ? 'png' : 'webp'; const filename = `${randomUUID()}.${extension}`; await writeFile(path.join(evidenceDirectory, filename), file.buffer); const metadata = isJpeg ? await exifr.parse(file.buffer, { tiff: true, exif: true, gps: true }) : null
     evidence.push({ filePath: `/uploads/evidence/${filename}`, mimeType: file.mimetype, sizeBytes: file.size, takenAt: metadata?.DateTimeOriginal?.toISOString?.() ?? null, originalName: file.originalname })
   }
-  try { const result = addVerification({ hotspotId: request.params.id, status: parsed.data.status as VerificationStatus, notes: parsed.data.notes, reviewerName: parsed.data.reviewer_name, visitedAt: parsed.data.visited_at, latitude: parsed.data.latitude ?? null, longitude: parsed.data.longitude ?? null, accuracy: parsed.data.location_accuracy_m ?? null, evidence }); if (!result) return response.status(404).json({ error: 'Hotspot not found.' }); response.status(201).json(result) } catch { response.status(404).json({ error: 'Hotspot not found.' }) }
+  try { const result = addVerification({ hotspotId: request.params.id as string, status: parsed.data.status as VerificationStatus, notes: parsed.data.notes, reviewerName: parsed.data.reviewer_name, visitedAt: parsed.data.visited_at, latitude: parsed.data.latitude ?? null, longitude: parsed.data.longitude ?? null, accuracy: parsed.data.location_accuracy_m ?? null, evidence }); if (!result) return response.status(404).json({ error: 'Hotspot not found.' }); response.status(201).json(result) } catch { response.status(404).json({ error: 'Hotspot not found.' }) }
 })
 
 app.listen(port, () => {

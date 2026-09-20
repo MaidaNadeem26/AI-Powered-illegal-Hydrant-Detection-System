@@ -1,0 +1,88 @@
+:root {
+  /* Global Water Theft Detection & Monitoring - Strict Light Theme */
+  color-scheme: light;
+
+  /* Cool-toned Paper Base & Neutral Surfaces */
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --surface-alt: #e9edeb;
+  --line: #d3dad7;
+  --line-strong: #b7c1bc;
+
+  /* Typography Colors */
+  --ink: #10201c;
+  --ink-muted: #526059;
+  --ink-faint: #839089;
+  --ink-inverse: #ffffff;
+
+  /* Primary Authority Accent: Navy (#16324F) */
+  --primary: #16324f;
+  --primary-dark: #0e2237;
+  --primary-tint: #e2e9ee;
+  --primary-ring: rgba(22, 50, 79, 0.22);
+
+  /* Signal / Evidence Alert: Muted Amber (#B4832A) */
+  --signal: #b4832a;
+  --signal-tint: #f1e6cd;
+  --signal-dark: #8b631b;
+
+  /* Danger / High Severity: Muted Brick-Slate (#9B4A3E) */
+  --danger: #9b4a3e;
+  --danger-tint: #f0e0dc;
+  --danger-dark: #7a362c;
+
+  /* Success / Ground Truth Verified: Muted Sage (#4C7A5E) */
+  --success: #4c7a5e;
+  --success-tint: #e4eee7;
+  --success-dark: #385c46;
+
+  /* Systematic Backward-Compatibility Aliases */
+  --teal: var(--primary);
+  --teal-dark: var(--primary-dark);
+  --teal-tint: var(--primary-tint);
+  --teal-ring: var(--primary-ring);
+
+  --gold: var(--signal);
+  --gold-tint: var(--signal-tint);
+  --gold-dark: var(--signal-dark);
+
+  --brick: var(--danger);
+  --brick-tint: var(--danger-tint);
+  --brick-dark: var(--danger-dark);
+
+  --moss: var(--success);
+  --moss-tint: var(--success-tint);
+  --moss-dark: var(--success-dark);
+
+  /* Typography Scales */
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* 8px-based Spacing Grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* Precise Instrument Radii (Tight, technical geometry) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* Flat 1px Elevation (Minimal shadows reserved for floating panels/modals) */
+  --shadow-flat: none;
+  --shadow-hover: 0 2px 8px rgba(16, 32, 28, 0.08);
+  --shadow-elevated: 0 10px 25px -3px rgba(16, 32, 28, 0.12), 0 4px 6px -2px rgba(16, 32, 28, 0.04);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
