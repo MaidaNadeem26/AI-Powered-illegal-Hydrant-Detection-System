@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 server/debug/
+server/data/
+server/uploads/
+*.db
+*.db-wal
+*.db-shm
 .env
 .env.*
 !.env.example

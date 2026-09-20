@@ -17,6 +17,8 @@ button, input { font: inherit; }
 button:focus-visible, input:focus-visible { outline: 3px solid rgba(23, 96, 122, .35); outline-offset: 2px; }
 
 .app-shell { display: flex; height: 100dvh; min-height: 600px; overflow: hidden; }
+.top-nav { position: fixed; z-index: 1200; top: 12px; right: 20px; display: flex; gap: 4px; padding: 4px; border: 1px solid rgba(19,39,43,.14); border-radius: 7px; background: rgba(255,255,255,.88); box-shadow: 0 3px 12px rgba(19,39,43,.1); }.top-nav a { padding: 7px 10px; border-radius: 4px; color: #617175; font-size: 12px; font-weight: 800; text-decoration: none; }.top-nav a:hover { color: #17607a; background: #edf5f2; }
+.saved-banner { margin-top: 16px; padding: 10px 12px; border-left: 3px solid #438764; color: #2e7259; background: #edf8f2; font-size: 12px; line-height: 1.5; }.saved-banner a { color: #17607a; font-weight: 800; }
 .control-panel { width: 416px; min-width: 416px; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
 .panel-header { display: flex; align-items: center; gap: 12px; padding: 22px 24px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.3); }
 .brand-mark { display: grid; place-items: center; width: 38px; height: 38px; border: 1.5px solid var(--blue); border-radius: 12px; color: var(--blue); font-size: 24px; line-height: 1; }

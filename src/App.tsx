@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { analyzeSatelliteProduct, type AnalysisResponse, type SatelliteProduct, type SearchRequest } from './api'
+import { Link } from 'react-router-dom'
 import './App.css'
 
 type ProgressStatus = 'pending' | 'active' | 'done' | 'failed'
@@ -122,6 +123,7 @@ function App() {
         <section className="panel-section progress-section"><div className="section-heading"><div><p className="section-kicker">Pipeline</p><h2>Analysis progress</h2></div><span className="step-number">03</span></div><ol className="progress-list">{steps.map((step) => <li className={`progress-step ${step.status}`} key={step.key}><span className="status-icon" aria-hidden="true">{statusIcon(step.status)}</span><span>{step.label}</span></li>)}</ol></section>
         {error && <div className="error-box" role="alert"><strong>Analysis failed</strong><span>{error}</span></div>}
         {response && <ResultPanel analysis={analysis} hotspot={hotspot} centerPin={centerPin} product={response.product} image={response.image} />}
+        {response?.saved && response.hotspotId && <p className="saved-banner" role="status">Saved to dashboard. <Link to={`/hotspots/${response.hotspotId}`}>Open hotspot</Link></p>}
       </div>
       <p className="disclaimer">This is a screening result from satellite imagery. It does not show that any water use is illegal. Confirm with a site visit or records before acting.</p>
     </aside>

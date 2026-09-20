@@ -48,6 +48,9 @@ export interface AnalysisResponse {
   hotspot: Hotspot | null
   product: SatelliteProduct
   image: { width: number; height: number; bytes: number }
+  saved?: boolean
+  hotspotId?: string
+  detectionId?: string
 }
 
 const SEARCH_ROUTE = '/api/satellite/search'
