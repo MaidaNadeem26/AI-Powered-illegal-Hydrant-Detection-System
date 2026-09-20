@@ -24,7 +24,7 @@ interface SearchResponse {
   products: SatelliteProduct[]
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+const API_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 
 export async function searchSatelliteProducts(input: {
   geometry: GeoJSON.Feature<GeoJSON.Polygon>
