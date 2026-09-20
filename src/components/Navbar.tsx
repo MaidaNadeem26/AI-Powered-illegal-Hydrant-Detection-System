@@ -40,9 +40,6 @@ export function Navbar() {
 
           {/* Center Navigation Links */}
           <nav className="hidden md:flex items-center space-x-1" aria-label="Main Navigation">
-            <a
-              href="/landing.html"
-              className="px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-alt)] transition-colors"
             <NavLink
               to="/landing"
               className={({ isActive }) =>
@@ -54,7 +51,6 @@ export function Navbar() {
               }
             >
               Product overview
-            </a>
             </NavLink>
             <NavLink
               to="/"
@@ -126,9 +122,6 @@ export function Navbar() {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-[var(--line)] bg-[var(--surface)] px-4 pt-2 pb-3 space-y-1">
-          <a
-            href="/landing.html"
-            className="block px-3 py-2.5 rounded-[var(--radius-sm)] text-sm text-[var(--ink-muted)] hover:bg-[var(--surface-alt)]"
           <NavLink
             to="/landing"
             onClick={() => setMobileMenuOpen(false)}
@@ -141,7 +134,6 @@ export function Navbar() {
             }
           >
             Product overview
-          </a>
           </NavLink>
           <NavLink
             to="/"
@@ -175,3 +167,4 @@ export function Navbar() {
     </header>
   )
 }
+
