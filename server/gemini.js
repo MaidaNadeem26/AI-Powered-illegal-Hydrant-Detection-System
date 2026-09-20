@@ -77,7 +77,7 @@ export async function analyzeSatelliteImage(product, geometry, image) {
         targetModel = 'gemini-3.6-flash';
     }
 
-    const candidateModels = Array.from(new Set([targetModel, 'gemini-1.5-flash', 'gemini-2.0-flash']));
+    const candidateModels = Array.from(new Set([targetModel, 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']));
     let lastError = null;
 
     for (const model of candidateModels) {
@@ -101,7 +101,16 @@ export async function analyzeSatelliteImage(product, geometry, image) {
                 // Preserve the raw provider response when it is not JSON.
             }
 
-            if (response.status === 404 && model !== candidateModels[candidateModels.length - 1]) {
+            const isRetryable =
+                response.status === 503 ||
+                response.status === 429 ||
+                response.status === 404 ||
+                response.status === 500 ||
+                response.status === 502 ||
+                response.status === 504;
+
+            if (isRetryable && model !== candidateModels[candidateModels.length - 1]) {
+                console.warn(`[gemini] Model ${model} returned HTTP ${response.status} (${detail}). Automatically failing over to next model...`);
                 lastError = new Error(`Gemini API returned HTTP ${response.status} for ${model}: ${detail}`);
                 continue;
             }
