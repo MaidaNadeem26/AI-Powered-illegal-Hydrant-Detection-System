@@ -10,6 +10,8 @@
     "build": "echo 'Backend ready'",
     "start": "tsx index.ts",
     "server": "tsx index.ts",
+    "start": "node index.js",
+    "server": "node index.js",
     "postinstall": "npm rebuild better-sqlite3"
   },
   "dependencies": {
