@@ -1,128 +1,302 @@
-import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 const serverDirectory = path.dirname(fileURLToPath(import.meta.url));
 const dataDirectory = path.join(serverDirectory, 'data');
-await mkdir(dataDirectory, { recursive: true });
-export const db = new Database(path.join(dataDirectory, 'app.db'));
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-db.exec(`
-  CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS hotspots (
-    id TEXT PRIMARY KEY, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-    latitude REAL NOT NULL, longitude REAL NOT NULL, location_is_approximate INTEGER NOT NULL DEFAULT 1,
-    area_geojson TEXT NOT NULL, country TEXT, region TEXT, latest_confidence REAL NOT NULL,
-    latest_summary TEXT NOT NULL, latest_signs TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', demo INTEGER NOT NULL DEFAULT 0
-  );
-  CREATE TABLE IF NOT EXISTS detections (
-    id TEXT PRIMARY KEY, hotspot_id TEXT NOT NULL REFERENCES hotspots(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL, model TEXT NOT NULL, confidence REAL NOT NULL, summary TEXT NOT NULL,
-    signs TEXT NOT NULL, product_id TEXT NOT NULL, product_name TEXT NOT NULL, collection TEXT NOT NULL,
-    captured_at TEXT, satellite_image_path TEXT
-  );
-  CREATE TABLE IF NOT EXISTS verifications (
-    id TEXT PRIMARY KEY, hotspot_id TEXT NOT NULL REFERENCES hotspots(id) ON DELETE CASCADE,
-    status TEXT NOT NULL, notes TEXT NOT NULL, reviewer_name TEXT NOT NULL, visited_at TEXT NOT NULL,
-    latitude REAL, longitude REAL, location_accuracy_m REAL, created_at TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS evidence (
-    id TEXT PRIMARY KEY, verification_id TEXT NOT NULL REFERENCES verifications(id) ON DELETE CASCADE,
-    file_path TEXT NOT NULL, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL,
-    taken_at TEXT, original_name TEXT NOT NULL
-  );
-  CREATE TABLE IF NOT EXISTS geocache (latitude REAL NOT NULL, longitude REAL NOT NULL, country TEXT, region TEXT, created_at TEXT NOT NULL, PRIMARY KEY(latitude, longitude));
-  CREATE INDEX IF NOT EXISTS idx_hotspots_status ON hotspots(status);
-  CREATE INDEX IF NOT EXISTS idx_hotspots_confidence ON hotspots(latest_confidence);
-  CREATE INDEX IF NOT EXISTS idx_detections_hotspot ON detections(hotspot_id);
-  CREATE INDEX IF NOT EXISTS idx_verifications_hotspot ON verifications(hotspot_id);
-`);
+if (!fs.existsSync(dataDirectory)) {
+    fs.mkdirSync(dataDirectory, { recursive: true });
+}
+const dataFilePath = path.join(dataDirectory, 'app.json');
+
 export const now = () => new Date().toISOString();
 export const statuses = ['verified', 'unverified', 'further_investigation'];
+
+function getInitialData() {
+    const data = {
+        hotspots: [],
+        detections: [],
+        verifications: [],
+        evidence: [],
+    };
+    const countries = ['Pakistan', 'Jordan', 'Kenya'];
+    const regions = ['Sindh', 'Amman', 'Nairobi'];
+    const statusList = ['pending', 'verified', 'unverified', 'further_investigation'];
+    for (let index = 0; index < 15; index += 1) {
+        const created = new Date(Date.now() - index * 86400000).toISOString();
+        const id = randomUUID();
+        const conf = Math.round((0.45 + (index % 5) * 0.1) * 100) / 100;
+        const st = statusList[index % statusList.length];
+        data.hotspots.push({
+            id,
+            created_at: created,
+            updated_at: now(),
+            latitude: 24.86 + index * 0.01,
+            longitude: 67.0 + index * 0.01,
+            location_is_approximate: true,
+            area_geojson: {},
+            country: countries[index % 3],
+            region: regions[index % 3],
+            latest_confidence: conf,
+            latest_summary: 'Screening anomaly flagged in urban infrastructure sector.',
+            latest_signs: ['Surface reservoir signature', 'Booster manifold loop', 'Heavy vehicle rut tracks'],
+            status: st,
+            demo: 1,
+        });
+        data.detections.push({
+            id: randomUUID(),
+            hotspot_id: id,
+            created_at: created,
+            model: 'gemini-2.5-flash',
+            confidence: conf,
+            summary: 'Screening anomaly flagged in urban infrastructure sector.',
+            signs: ['Surface reservoir signature', 'Booster manifold loop'],
+            product_id: `S2A_MSIL2A_202609${String(index + 1).padStart(2, '0')}`,
+            product_name: `Sentinel-2 MSI Level-2A Sector ${index + 1}`,
+            collection: 'SENTINEL-2',
+            captured_at: created,
+            satellite_image_path: '/images/satellite-detection.jpg',
+        });
+    }
+    return data;
+}
+
+function loadData() {
+    try {
+        if (fs.existsSync(dataFilePath)) {
+            const raw = fs.readFileSync(dataFilePath, 'utf-8');
+            return JSON.parse(raw);
+        }
+    }
+    catch (error) {
+        console.error('Failed to parse app.json, initializing fresh store:', error);
+    }
+    const initial = getInitialData();
+    saveData(initial);
+    return initial;
+}
+
+function saveData(data) {
+    try {
+        fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+    catch (error) {
+        console.error('Failed to write app.json:', error);
+    }
+}
+
+let appData = loadData();
+
+function distanceMeters(lat1, lon1, lat2, lon2) {
+    const dLat = (lat2 - lat1) * 111320;
+    const dLon = (lon2 - lon1) * 111320 * Math.cos((lat1 * Math.PI) / 180);
+    return Math.sqrt(dLat * dLat + dLon * dLon);
+}
+
 export function deriveStatus(hotspotId) {
-    const row = db.prepare('SELECT status FROM verifications WHERE hotspot_id = ? ORDER BY created_at DESC LIMIT 1').get(hotspotId);
-    return row?.status ?? 'pending';
+    const vers = appData.verifications
+        .filter((v) => v.hotspot_id === hotspotId)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return vers[0]?.status ?? 'pending';
 }
-function parseHotspot(row) {
-    return { ...row, location_is_approximate: Boolean(row.location_is_approximate), latest_signs: JSON.parse(String(row.latest_signs)) };
-}
+
 export function saveDetection(input) {
     const timestamp = now();
-    const nearby = db.prepare(`SELECT * FROM hotspots WHERE ((latitude - ?) * 111320) * ((latitude - ?) * 111320) + ((longitude - ?) * 111320 * cos(radians(latitude)) * (longitude - ?) * 111320 * cos(radians(latitude))) <= ?`).get(input.latitude, input.latitude, input.longitude, input.longitude, 300 * 300);
-    const hotspotId = String(nearby?.id ?? randomUUID());
+    const nearby = appData.hotspots.find((h) => distanceMeters(input.latitude, input.longitude, h.latitude, h.longitude) <= 300);
+    const hotspotId = nearby?.id ?? randomUUID();
     const detectionId = randomUUID();
-    const transaction = db.transaction(() => {
-        if (nearby) {
-            db.prepare(`UPDATE hotspots SET updated_at = ?, latitude = ?, longitude = ?, location_is_approximate = ?, area_geojson = ?, latest_confidence = ?, latest_summary = ?, latest_signs = ? WHERE id = ?`).run(timestamp, input.latitude, input.longitude, input.approximate ? 1 : 0, JSON.stringify(input.areaGeojson), input.confidence, input.summary, JSON.stringify(input.signs), hotspotId);
-        }
-        else {
-            db.prepare(`INSERT INTO hotspots (id, created_at, updated_at, latitude, longitude, location_is_approximate, area_geojson, latest_confidence, latest_summary, latest_signs, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`).run(hotspotId, timestamp, timestamp, input.latitude, input.longitude, input.approximate ? 1 : 0, JSON.stringify(input.areaGeojson), input.confidence, input.summary, JSON.stringify(input.signs));
-        }
-        db.prepare(`INSERT INTO detections (id, hotspot_id, created_at, model, confidence, summary, signs, product_id, product_name, collection, captured_at, satellite_image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(detectionId, hotspotId, timestamp, input.model, input.confidence, input.summary, JSON.stringify(input.signs), input.productId, input.productName, input.collection, input.capturedAt, input.imagePath);
+    if (nearby) {
+        nearby.updated_at = timestamp;
+        nearby.latitude = input.latitude;
+        nearby.longitude = input.longitude;
+        nearby.location_is_approximate = input.approximate;
+        nearby.area_geojson = input.areaGeojson;
+        nearby.latest_confidence = input.confidence;
+        nearby.latest_summary = input.summary;
+        nearby.latest_signs = input.signs;
+    }
+    else {
+        appData.hotspots.push({
+            id: hotspotId,
+            created_at: timestamp,
+            updated_at: timestamp,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            location_is_approximate: input.approximate,
+            area_geojson: input.areaGeojson,
+            country: null,
+            region: null,
+            latest_confidence: input.confidence,
+            latest_summary: input.summary,
+            latest_signs: input.signs,
+            status: 'pending',
+            demo: 0,
+        });
+    }
+    appData.detections.push({
+        id: detectionId,
+        hotspot_id: hotspotId,
+        created_at: timestamp,
+        model: input.model,
+        confidence: input.confidence,
+        summary: input.summary,
+        signs: input.signs,
+        product_id: input.productId,
+        product_name: input.productName,
+        collection: input.collection,
+        captured_at: input.capturedAt,
+        satellite_image_path: input.imagePath,
     });
-    transaction();
+    saveData(appData);
     return { hotspotId, detectionId, saved: true };
 }
+
 export function listHotspots(filters) {
-    const where = [];
-    const values = [];
+    let list = [...appData.hotspots];
     if (filters.country) {
-        where.push('h.country = ?');
-        values.push(filters.country);
+        list = list.filter((h) => h.country?.toLowerCase() === filters.country?.toLowerCase());
     }
     if (filters.region) {
-        where.push('h.region = ?');
-        values.push(filters.region);
+        list = list.filter((h) => h.region?.toLowerCase() === filters.region?.toLowerCase());
     }
     if (filters.status) {
-        where.push('h.status = ?');
-        values.push(filters.status);
+        list = list.filter((h) => h.status === filters.status);
     }
     if (filters.from) {
-        where.push('h.created_at >= ?');
-        values.push(filters.from);
+        list = list.filter((h) => h.created_at >= (filters.from ?? ''));
     }
     if (filters.to) {
-        where.push('h.created_at <= ?');
-        values.push(filters.to);
+        list = list.filter((h) => h.created_at <= (filters.to ?? ''));
     }
     if (filters.minConfidence) {
-        where.push('h.latest_confidence >= ?');
-        values.push(Number(filters.minConfidence));
+        const min = Number(filters.minConfidence);
+        list = list.filter((h) => h.latest_confidence >= min);
     }
     if (filters.q) {
-        where.push('(h.country LIKE ? OR h.region LIKE ? OR h.latest_summary LIKE ?)');
-        values.push(`%${filters.q}%`, `%${filters.q}%`, `%${filters.q}%`);
+        const q = filters.q.toLowerCase();
+        list = list.filter((h) => h.country?.toLowerCase().includes(q) ||
+            h.region?.toLowerCase().includes(q) ||
+            h.latest_summary.toLowerCase().includes(q));
     }
-    const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const order = filters.sort === 'confidence' ? 'h.latest_confidence DESC' : filters.sort === 'status' ? 'h.status ASC, h.updated_at DESC' : 'h.updated_at DESC';
-    const total = db.prepare(`SELECT COUNT(*) count FROM hotspots h ${clause}`).get(...values).count;
+    if (filters.sort === 'confidence') {
+        list.sort((a, b) => b.latest_confidence - a.latest_confidence);
+    }
+    else if (filters.sort === 'status') {
+        list.sort((a, b) => a.status.localeCompare(b.status) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }
+    else {
+        list.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }
+    const total = list.length;
     const page = Math.max(1, Number(filters.page ?? 1));
     const pageSize = Math.min(100, Math.max(1, Number(filters.pageSize ?? 20)));
-    const rows = db.prepare(`SELECT h.*, (SELECT COUNT(*) FROM detections d WHERE d.hotspot_id = h.id) detection_count, (SELECT MAX(created_at) FROM detections d WHERE d.hotspot_id = h.id) last_detected, (SELECT MAX(created_at) FROM verifications v WHERE v.hotspot_id = h.id) last_verified_at FROM hotspots h ${clause} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...values, pageSize, (page - 1) * pageSize);
-    return { items: rows.map(parseHotspot), total, page, pageSize };
+    const offset = (page - 1) * pageSize;
+    const paged = list.slice(offset, offset + pageSize);
+    const items = paged.map((h) => {
+        const hotspotDetections = appData.detections.filter((d) => d.hotspot_id === h.id);
+        const hotspotVerifications = appData.verifications.filter((v) => v.hotspot_id === h.id);
+        const lastDetected = hotspotDetections
+            .map((d) => d.created_at)
+            .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+        const lastVerified = hotspotVerifications
+            .map((v) => v.created_at)
+            .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+        return {
+            ...h,
+            detection_count: hotspotDetections.length,
+            last_detected: lastDetected,
+            last_verified_at: lastVerified,
+        };
+    });
+    return { items, total, page, pageSize };
 }
+
 export function getStats(filters) {
     const items = listHotspots({ ...filters, page: '1', pageSize: '10000' }).items;
-    const counts = Object.fromEntries(['pending', ...statuses].map((status) => [status, items.filter((item) => item.status === status).length]));
-    return { counts, countries: [...new Set(items.map((item) => item.country).filter(Boolean))], regions: [...new Set(items.map((item) => item.region).filter(Boolean))] };
+    const counts = Object.fromEntries(['pending', ...statuses].map((st) => [st, items.filter((item) => item.status === st).length]));
+    return {
+        counts,
+        countries: [...new Set(items.map((item) => item.country).filter(Boolean))],
+        regions: [...new Set(items.map((item) => item.region).filter(Boolean))],
+    };
 }
+
 export function getHotspot(id) {
-    const row = db.prepare('SELECT * FROM hotspots WHERE id = ?').get(id);
-    if (!row)
+    const hotspot = appData.hotspots.find((h) => h.id === id);
+    if (!hotspot)
         return null;
-    const detections = db.prepare('SELECT * FROM detections WHERE hotspot_id = ? ORDER BY created_at DESC').all(id);
-    const verifications = db.prepare('SELECT * FROM verifications WHERE hotspot_id = ? ORDER BY created_at DESC').all(id);
-    return { hotspot: parseHotspot(row), detections: detections.map((d) => ({ ...d, signs: JSON.parse(String(d.signs)) })), verifications: verifications.map((v) => ({ ...v, evidence: db.prepare('SELECT * FROM evidence WHERE verification_id = ?').all(v.id) })) };
+    const detections = appData.detections
+        .filter((d) => d.hotspot_id === id)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const verifications = appData.verifications
+        .filter((v) => v.hotspot_id === id)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .map((v) => ({
+        ...v,
+        evidence: appData.evidence.filter((e) => e.verification_id === v.id),
+    }));
+    const hotspotDetections = detections;
+    const lastDetected = hotspotDetections
+        .map((d) => d.created_at)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+    const lastVerified = verifications
+        .map((v) => v.created_at)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+    return {
+        hotspot: {
+            ...hotspot,
+            detection_count: detections.length,
+            last_detected: lastDetected,
+            last_verified_at: lastVerified,
+        },
+        detections,
+        verifications,
+    };
 }
-export function updateHotspot(id, country, region) { db.prepare('UPDATE hotspots SET country = ?, region = ?, updated_at = ? WHERE id = ?').run(country, region, now(), id); return getHotspot(id); }
+
+export function updateHotspot(id, country, region) {
+    const hotspot = appData.hotspots.find((h) => h.id === id);
+    if (!hotspot)
+        return null;
+    hotspot.country = country;
+    hotspot.region = region;
+    hotspot.updated_at = now();
+    saveData(appData);
+    return getHotspot(id);
+}
+
 export function addVerification(input) {
+    const hotspot = appData.hotspots.find((h) => h.id === input.hotspotId);
+    if (!hotspot)
+        return null;
     const id = randomUUID();
     const timestamp = now();
-    const transaction = db.transaction(() => { db.prepare(`INSERT INTO verifications (id, hotspot_id, status, notes, reviewer_name, visited_at, latitude, longitude, location_accuracy_m, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(id, input.hotspotId, input.status, input.notes, input.reviewerName, input.visitedAt, input.latitude, input.longitude, input.accuracy, timestamp); const statement = db.prepare('INSERT INTO evidence (id, verification_id, file_path, mime_type, size_bytes, taken_at, original_name) VALUES (?, ?, ?, ?, ?, ?, ?)'); for (const item of input.evidence)
-        statement.run(randomUUID(), id, item.filePath, item.mimeType, item.sizeBytes, item.takenAt, item.originalName); db.prepare('UPDATE hotspots SET status = ?, updated_at = ? WHERE id = ?').run(input.status, timestamp, input.hotspotId); });
-    transaction();
+    appData.verifications.push({
+        id,
+        hotspot_id: input.hotspotId,
+        status: input.status,
+        notes: input.notes,
+        reviewer_name: input.reviewerName,
+        visited_at: input.visitedAt,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        location_accuracy_m: input.accuracy,
+        created_at: timestamp,
+    });
+    for (const item of input.evidence) {
+        appData.evidence.push({
+            id: randomUUID(),
+            verification_id: id,
+            file_path: item.filePath,
+            mime_type: item.mimeType,
+            size_bytes: item.sizeBytes,
+            taken_at: item.takenAt,
+            original_name: item.originalName,
+        });
+    }
+    hotspot.status = input.status;
+    hotspot.updated_at = timestamp;
+    saveData(appData);
     return getHotspot(input.hotspotId);
 }
