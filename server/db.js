@@ -48,7 +48,7 @@ function getInitialData() {
             id: randomUUID(),
             hotspot_id: id,
             created_at: created,
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.6-flash',
             confidence: conf,
             summary: 'Screening anomaly flagged in urban infrastructure sector.',
             signs: ['Surface reservoir signature', 'Booster manifold loop'],

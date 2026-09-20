@@ -77,7 +77,7 @@ Copy `.env.example` to `server/.env` and fill in the values. The backend reads `
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | Yes | Gemini API key |
-| `GEMINI_MODEL` | No | Gemini model name (default `gemini-2.5-flash`) |
+| `GEMINI_MODEL` | No | Gemini model name (default `gemini-3.6-flash`) |
 | `CDSE_USERNAME` | Yes* | Copernicus Data Space account email |
 | `CDSE_PASSWORD` | Yes* | Copernicus Data Space password |
 | `CDSE_ACCESS_TOKEN` | No | A ready-made token, used instead of username and password (tokens expire after about 10 minutes) |

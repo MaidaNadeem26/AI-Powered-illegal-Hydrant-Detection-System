@@ -22,8 +22,11 @@ export interface HotspotDetail {
   verifications: Array<Record<string, unknown> & { evidence: Array<Record<string, unknown>> }>
 }
 
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+
 async function request<T>(url: string, options?: RequestInit) {
-  const response = await fetch(url, options)
+  const finalUrl = url.startsWith('http') ? url : `${API_BASE}${url}`
+  const response = await fetch(finalUrl, options)
   const payload = await response.json() as T & { error?: string }
   if (!response.ok) throw new Error(payload.error ?? 'Request failed.')
   return payload as T
@@ -34,6 +37,6 @@ export function hotspotStats(params: URLSearchParams) { return request<{ counts:
 export function getHotspot(id: string) { return request<HotspotDetail>(`/api/hotspots/${id}`) }
 export function updateHotspot(id: string, country: string | null, region: string | null) { return request<HotspotDetail>(`/api/hotspots/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ country, region }) }) }
 export function submitVerification(id: string, form: FormData) { return request<HotspotDetail>(`/api/hotspots/${id}/verifications`, { method: 'POST', body: form }) }
-export function exportHotspots(params: URLSearchParams) { window.location.href = `/api/hotspots/export.csv?${params}` }
+export function exportHotspots(params: URLSearchParams) { window.location.href = `${API_BASE}/api/hotspots/export.csv?${params}` }
 
 export type { AnalysisResponse }

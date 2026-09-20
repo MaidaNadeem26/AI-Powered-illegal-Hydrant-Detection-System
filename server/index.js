@@ -15,7 +15,7 @@ import { addVerification, getHotspot, getStats, listHotspots, saveDetection, sta
 dotenv.config({ path: fileURLToPath(new URL('./.env', import.meta.url)) });
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173' }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use('/uploads', express.static(path.join(path.dirname(fileURLToPath(new URL('.', import.meta.url))), 'uploads'), { setHeaders: (response) => response.setHeader('X-Content-Type-Options', 'nosniff') }));
 const upload = multer({ storage: multer.memoryStorage(), limits: { files: 6, fileSize: 8 * 1024 * 1024 } });
@@ -77,7 +77,10 @@ app.post('/api/satellite/analyze', async (request, response) => {
             await mkdir(uploadsDirectory, { recursive: true });
             const filename = `${randomUUID()}.jpg`;
             await writeFile(path.join(uploadsDirectory, filename), Buffer.from(processImage.dataUrl.split(',')[1], 'base64'));
-            persistence = saveDetection({ latitude: hotspot.latitude, longitude: hotspot.longitude, approximate: analysis.latitude === null, areaGeojson: searchRequest.geometry, confidence: analysis.confidence, summary: analysis.summary, signs: analysis.signs, productId: satelliteProduct.id, productName: satelliteProduct.name, collection: satelliteProduct.collection, capturedAt: satelliteProduct.startDate, imagePath: `/uploads/satellite/${filename}`, model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash' });
+            const savedModel = (process.env.GEMINI_MODEL?.trim() && process.env.GEMINI_MODEL.trim() !== 'gemini-2.5-flash')
+                ? process.env.GEMINI_MODEL.trim().replace(/^models\//, '')
+                : 'gemini-3.6-flash';
+            persistence = saveDetection({ latitude: hotspot.latitude, longitude: hotspot.longitude, approximate: analysis.latitude === null, areaGeojson: searchRequest.geometry, confidence: analysis.confidence, summary: analysis.summary, signs: analysis.signs, productId: satelliteProduct.id, productName: satelliteProduct.name, collection: satelliteProduct.collection, capturedAt: satelliteProduct.startDate, imagePath: `/uploads/satellite/${filename}`, model: savedModel });
         }
         response.json({ analysis, hotspot, product: satelliteProduct, image: { width: processImage.width, height: processImage.height, bytes: processImage.bytes }, ...persistence });
     }

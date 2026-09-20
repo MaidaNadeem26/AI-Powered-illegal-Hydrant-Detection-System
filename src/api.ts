@@ -53,8 +53,9 @@ export interface AnalysisResponse {
   detectionId?: string
 }
 
-const SEARCH_ROUTE = '/api/satellite/search'
-const ANALYZE_ROUTE = '/api/satellite/analyze'
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
+const SEARCH_ROUTE = `${API_BASE}/api/satellite/search`
+const ANALYZE_ROUTE = `${API_BASE}/api/satellite/analyze`
 
 async function parseResponse<T>(response: Response, fallback: string) {
   const payload = await response.json() as T & { error?: string }

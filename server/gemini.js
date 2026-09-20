@@ -1,5 +1,5 @@
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
-const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash';
 function analysisPrompt(product, geometry) {
     const ring = geometry.geometry.coordinates[0];
     const longitudes = ring.map(([longitude]) => longitude);
@@ -65,35 +65,54 @@ async function imageToInlineData(image) {
     return { mimeType, data };
 }
 export async function analyzeSatelliteImage(product, geometry, image) {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey)
         throw new Error('GEMINI_API_KEY is not configured on the backend.');
     const imagePart = await imageToInlineData(image);
-    const model = process.env.GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
-    const endpoint = `${GEMINI_API_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: analysisPrompt(product, geometry) }, { inlineData: imagePart }] }],
-            generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-        }),
-    });
-    if (!response.ok) {
-        const errorBody = await response.text();
-        let detail = errorBody;
-        try {
-            const parsed = JSON.parse(errorBody);
-            detail = parsed.error?.message ?? errorBody;
-        }
-        catch {
-            // Preserve the raw provider response when it is not JSON.
-        }
-        throw new Error(`Gemini API returned HTTP ${response.status}: ${detail}`);
+    let targetModel = (process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL);
+    if (targetModel.startsWith('models/')) {
+        targetModel = targetModel.slice('models/'.length);
     }
-    const payload = (await response.json());
-    const content = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('');
-    if (!content)
-        throw new Error('Gemini returned an empty analysis.');
-    return parseAnalysis(content);
+    if (targetModel === 'gemini-2.5-flash') {
+        targetModel = 'gemini-3.6-flash';
+    }
+
+    const candidateModels = Array.from(new Set([targetModel, 'gemini-1.5-flash', 'gemini-2.0-flash']));
+    let lastError = null;
+
+    for (const model of candidateModels) {
+        const endpoint = `${GEMINI_API_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: analysisPrompt(product, geometry) }, { inlineData: imagePart }] }],
+                generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+            }),
+        });
+        if (!response.ok) {
+            const errorBody = await response.text();
+            let detail = errorBody;
+            try {
+                const parsed = JSON.parse(errorBody);
+                detail = parsed.error?.message ?? errorBody;
+            }
+            catch {
+                // Preserve the raw provider response when it is not JSON.
+            }
+
+            if (response.status === 404 && model !== candidateModels[candidateModels.length - 1]) {
+                lastError = new Error(`Gemini API returned HTTP ${response.status} for ${model}: ${detail}`);
+                continue;
+            }
+            throw new Error(`Gemini API returned HTTP ${response.status}: ${detail}`);
+        }
+        const payload = (await response.json());
+        const content = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('');
+        if (!content)
+            throw new Error('Gemini returned an empty analysis.');
+        return parseAnalysis(content);
+    }
+
+    throw lastError ?? new Error('Gemini analysis failed.');
 }
